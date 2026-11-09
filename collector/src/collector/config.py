@@ -1,7 +1,7 @@
-from functools import lru_cache
 import os 
-from urllib.parse import quote_plus 
 from dataclasses import dataclass
+from functools import lru_cache
+from urllib.parse import quote_plus 
 @dataclass(frozen=True)
 class Settings:
     app_env:str 
