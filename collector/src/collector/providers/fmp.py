@@ -113,7 +113,7 @@ class FMPClient:
     def close(self) -> None:
         self.client.close()
 
-    def __enter__(self) -> "FMPClient":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, *args: object) -> None:
