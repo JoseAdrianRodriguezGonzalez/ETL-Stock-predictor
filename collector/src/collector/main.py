@@ -1,6 +1,7 @@
 from collector.config import get_settings
-from collector.providers.fmp import FMPClient
 from collector.normalization.market_data import MarketDataNormalizer
+from collector.providers.fmp import FMPClient
+
 
 def main():
     #Se obtienen las variables de entorno

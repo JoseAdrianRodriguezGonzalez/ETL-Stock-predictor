@@ -1,8 +1,9 @@
 import os
 from dataclasses import dataclass
 from functools import lru_cache
-from dotenv import load_dotenv
 from urllib.parse import quote_plus
+
+from dotenv import load_dotenv
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
