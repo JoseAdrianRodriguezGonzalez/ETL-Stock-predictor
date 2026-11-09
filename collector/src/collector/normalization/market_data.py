@@ -17,7 +17,7 @@ class MarketData(TypedDict):
 
 class MarketDataNormalizer:
     FIELD_MAPPING: ClassVar[dict[str, str]] = {"changePercent": "change_percent"}
-    REQUIRED_FILEDS: ClassVar[set[str]] = {
+    REQUIRED_FIELDS: ClassVar[set[str]] = {
         "symbol",
         "date",
         "open",
@@ -32,9 +32,9 @@ class MarketDataNormalizer:
 
     @classmethod
     def normalize(cls, record: dict[str, Any]) -> MarketData:
-        missing = cls.REQUIRED_FILEDS - record.keys()
+        missing = cls.REQUIRED_FIELDS - record.keys()
         if missing:
-            raise ValueError(f"Missing some required market data: {sorted(missing)}")
+            raise ValueError(f"Missing required market data fields: {sorted(missing)}")
         try:
             normalized = {
                 cls.FIELD_MAPPING.get(key, key): value for key, value in record.items()
@@ -52,22 +52,28 @@ class MarketDataNormalizer:
                 normalized[field] = float(normalized[field])
             normalized["volume"] = int(normalized["volume"])
             if not normalized["symbol"].strip():
-                raise ValueError("Symbol cannot be empty")
+                raise ValueError("symbol cannot be empty")
 
             if normalized["volume"] < 0:
                 raise ValueError("volume cannot be negative")
-            if normalized["high"] < max(
-                normalized["open"], normalized["close"], normalized["low"]
-            ):
-                raise ValueError("high must be >= open, close and low")
+            
+            if normalized["high"] < normalized["low"]:
+                raise ValueError("high must be >= low")
 
-            if normalized["low"] > min(
-                normalized["open"], normalized["close"], normalized["high"]
+            if normalized["high"] < max(
+                normalized["open"],
+                normalized["close"],
             ):
-                raise ValueError("low must be <= open,close and low")
+                raise ValueError("high must be >= open and close")
+            
+            if normalized["low"] > min(
+                normalized["open"],
+                normalized["close"],
+            ):
+                raise ValueError("low must be <= open and close")
             return MarketData(**normalized)
         except (TypeError, ValueError, KeyError) as exc:
-            raise ValueError(f"INvalid market data record: {exc}") from exc
+            raise ValueError(f"Invalid market data record: {exc}") from exc
 
     @classmethod
     def normalize_many(cls, records: list[dict[str, Any]]) -> list[MarketData]:
