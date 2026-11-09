@@ -76,3 +76,6 @@ sp500-mlops-platform/
 ├── .gitignore
 └── README.md
 ```
+
+The collector, will have the destination of FMP and HTTP API interface,as also tghe mongoDB and Pymongo as well and DVC and a CLI/Python versioning 
+The trainer, will hsot the model with MLFLow and DVC, the depployment, will use Triton, and the backend consumes the inference server by triton, http/grpc, and finally a frontend that consumes the backend and display it.
