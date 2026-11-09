@@ -17,7 +17,7 @@ def main():
         print(f"Available fields: {list(records[0].keys())}")
         print(f"Sample record: {records[0]}")
     # Normaliza 
-    normalize_records=MarketDataNormalizer.normalize_many(records)
+    normalized_records=MarketDataNormalizer.normalize_many(records)
     print(f"Normalized records: {len(normalized_records)}")
     print(f"Sample: {normalized_records[0]}")
 if __name__=="__main__":
