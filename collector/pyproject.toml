@@ -31,7 +31,7 @@ dev = [
     "ruff>=0.17.4",
 ]
 [tool.pytest.ini_options]
-testpaths=["../tests/collector/"]
+testpaths=["tests/collector/"]
 python_files=["test_*.py"]
 python_functions= ["test_*"]
 addopts="-ra"
