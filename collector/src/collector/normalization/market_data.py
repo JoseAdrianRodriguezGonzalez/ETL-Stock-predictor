@@ -29,7 +29,7 @@ class MarketDataNormalizer:
         "vwap"
     }
     @classmethod
-    def normalize(cls, record:dict:[str,Any])->MarketData:
+    def normalize(cls, record:dict[str,Any])->MarketData:
         missing= cls.REQUIRED_FILEDS-record.keys()
         if missing:
             raise ValueError(f"Missing some required market data: {sorted(missing)}")
@@ -52,9 +52,9 @@ class MarketDataNormalizer:
 
             if normalized["low"] > min(normalized["open"],normalized["close"],normalized["high"]):
                 raise ValueError("low must be <= open,close and low")
-            return normalized
+            return MarketData(**normalized)
         except (TypeError,ValueError,KeyError) as exc:
             raise ValueError(f"INvalid market data record: {exc}") from exc 
     @classmethod
-    def normalize_many(cls,recods:list[dict[str,Any]])->list[MarketData]:
+    def normalize_many(cls,records:list[dict[str,Any]])->list[MarketData]:
         return [cls.normalize(record) for record in records]
