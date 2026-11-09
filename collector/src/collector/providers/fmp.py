@@ -27,15 +27,20 @@ class FMPResponseError(FMPError):
 class FMPClient:
     ENDPOINT = "historical-price-eod/full"
 
-    def __init__(self,settings: Settings,transport: httpx.BaseTransport | None = None) -> None:
+    def __init__(
+        self, settings: Settings, transport: httpx.BaseTransport | None = None
+    ) -> None:
         self.max_retries = settings.fmp_max_retries
-        self.client = httpx.Client(base_url=f"{settings.fmp_base_url.rstrip('/')}/",
+        self.client = httpx.Client(
+            base_url=f"{settings.fmp_base_url.rstrip('/')}/",
             headers={"apikey": settings.fmp_api_key},
             timeout=settings.fmp_timeout,
-            transport=transport
+            transport=transport,
         )
 
-    def get_historical_prices(self,symbol: str,start_date: str | None = None,end_date: str | None = None) -> list[dict[str, Any]]:
+    def get_historical_prices(
+        self, symbol: str, start_date: str | None = None, end_date: str | None = None
+    ) -> list[dict[str, Any]]:
         if not symbol or not symbol.strip():
             raise ValueError("symbol cannot be empty")
 
@@ -53,21 +58,20 @@ class FMPClient:
 
             except httpx.TransportError as exc:
                 if attempt == self.max_retries:
-                    raise FMPConnectionError(
-                        "Could not communicate with FMP"
-                    ) from exc
+                    raise FMPConnectionError("Could not communicate with FMP") from exc
 
                 self._wait(attempt)
                 continue
 
-            if (response.status_code in (408, 429) or response.status_code >= 500) and attempt < self.max_retries:
-                    self._wait(attempt, response.headers.get("Retry-After"))
-                    continue
+            if (
+                response.status_code in (408, 429) or response.status_code >= 500
+            ) and attempt < self.max_retries:
+                self._wait(attempt, response.headers.get("Retry-After"))
+                continue
 
             if response.is_error:
                 raise FMPAPIError(
-                    f"FMP returned HTTP {response.status_code}: "
-                    f"{response.text[:500]}"
+                    f"FMP returned HTTP {response.status_code}: {response.text[:500]}"
                 )
 
             try:
@@ -89,7 +93,7 @@ class FMPClient:
 
         raise FMPConnectionError("FMP request failed after all retries")
 
-    def _wait(self,attempt: int,retry_after: str | None = None) -> None:
+    def _wait(self, attempt: int, retry_after: str | None = None) -> None:
         delay = min(2**attempt, 30)
         if retry_after:
             try:
@@ -101,9 +105,7 @@ class FMPClient:
                     if retry_date.tzinfo is None:
                         retry_date = retry_date.replace(tzinfo=UTC)
 
-                    delay = (
-                        retry_date - datetime.now(UTC)
-                    ).total_seconds()
+                    delay = (retry_date - datetime.now(UTC)).total_seconds()
 
                 except (TypeError, ValueError, OverflowError):
                     pass
