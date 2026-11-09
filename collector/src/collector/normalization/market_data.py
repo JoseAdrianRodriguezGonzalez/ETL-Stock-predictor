@@ -1,5 +1,6 @@
 from datetime import date
-from typing import Any, Dict, TypedDict
+from typing import Any, ClassVar, TypedDict
+
 
 class MarketData(TypedDict):
     symbol: str
@@ -13,10 +14,10 @@ class MarketData(TypedDict):
     change_percent: float
     vwap: float
 class MarketDataNormalizer:
-    FIELD_MAPPING  = {
+    FIELD_MAPPING: ClassVar[dict[str,str]]  = {
         "changePercent" : "change_percent"
     }
-    REQUIRED_FILEDS= {
+    REQUIRED_FILEDS:ClassVar[set[str]] = {
         "symbol",
         "date",
         "open",
