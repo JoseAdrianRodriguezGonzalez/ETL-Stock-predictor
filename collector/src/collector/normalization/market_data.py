@@ -60,17 +60,16 @@ class MarketDataNormalizer:
             if normalized["high"] < normalized["low"]:
                 raise ValueError("high must be >= low")
 
-            if normalized["high"] < max(
-                normalized["open"],
-                normalized["close"],
-            ):
-                raise ValueError("high must be >= open and close")
-
             if normalized["low"] > min(
                 normalized["open"],
                 normalized["close"],
             ):
                 raise ValueError("low must be <= open and close")
+            if normalized["high"] < max(
+                normalized["open"],
+                normalized["close"],
+            ):
+                raise ValueError("high must be >= open and close")
             return MarketData(**normalized)
         except (TypeError, ValueError, KeyError) as exc:
             raise ValueError(f"Invalid market data record: {exc}") from exc
