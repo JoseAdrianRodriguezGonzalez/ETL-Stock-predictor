@@ -1,5 +1,7 @@
 from collector.config import get_settings
 from collector.providers.fmp import FMPClient
+
+
 def main():
     settings=get_settings()
     with FMPClient(settings) as fmp:

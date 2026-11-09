@@ -1,8 +1,10 @@
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from typing import Any
+
 import httpx
+
 from collector.config import Settings
 
 
@@ -58,8 +60,7 @@ class FMPClient:
                 self._wait(attempt)
                 continue
 
-            if response.status_code in (408, 429) or response.status_code >= 500:
-                if attempt < self.max_retries:
+            if (response.status_code in (408, 429) or response.status_code >= 500) and attempt < self.max_retries:
                     self._wait(attempt, response.headers.get("Retry-After"))
                     continue
 
@@ -98,10 +99,10 @@ class FMPClient:
                     retry_date = parsedate_to_datetime(retry_after)
 
                     if retry_date.tzinfo is None:
-                        retry_date = retry_date.replace(tzinfo=timezone.utc)
+                        retry_date = retry_date.replace(tzinfo=UTC)
 
                     delay = (
-                        retry_date - datetime.now(timezone.utc)
+                        retry_date - datetime.now(UTC)
                     ).total_seconds()
 
                 except (TypeError, ValueError, OverflowError):
@@ -115,5 +116,5 @@ class FMPClient:
     def __enter__(self) -> "FMPClient":
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(self, *args: object) -> None:
         self.close()
