@@ -5,9 +5,13 @@ from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
 
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+PROJECT_ROOT = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "..")
+)
 
 load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
+
+
 @dataclass(frozen=True)
 class Settings:
     app_env: str
