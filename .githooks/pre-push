@@ -1,0 +1,22 @@
+#!/bin/sh
+set -eu
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo "=================================="
+echo "       PRE-PUSH VALIDATION"
+echo "=================================="
+
+echo "[1/3] Ruff lint..."
+uv run --project collector ruff check collector/
+
+echo "[2/3] Ruff format..."
+uv run --project collector ruff format --check collector/
+
+echo "[3/3] Pytest..."
+uv run --project collector pytest -v
+
+echo "=================================="
+echo " All checks passed. Push allowed."
+echo "=================================="
