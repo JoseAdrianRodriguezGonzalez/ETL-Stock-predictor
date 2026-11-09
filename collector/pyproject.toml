@@ -13,11 +13,13 @@ dependencies = [
     "pandas>=3.1.1",
     "pyarrow>=26.0.1",
     "pydantic>=2.14.3",
+    "pydantic-settings>=2.16.2",
     "pymongo>=4.19.0",
+    "python-dotenv>=1.2.4",
 ]
 
 [project.scripts]
-collector = "collector:main"
+collector = "collector.main:main"
 
 [build-system]
 requires = ["uv_build>=0.11.21,<0.12.0"]
@@ -28,3 +30,8 @@ dev = [
     "pytest>=9.2.0",
     "ruff>=0.17.4",
 ]
+[tool.pytest.ini_options]
+testpaths=["tests/collector/"]
+python_files=["test_*.py"]
+python_functions= ["test_*"]
+addopts="-ra"
