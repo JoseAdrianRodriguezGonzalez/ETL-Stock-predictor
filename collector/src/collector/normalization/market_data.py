@@ -57,9 +57,6 @@ class MarketDataNormalizer:
             if normalized["volume"] < 0:
                 raise ValueError("volume cannot be negative")
 
-            if normalized["high"] < normalized["low"]:
-                raise ValueError("high must be >= low")
-
             if normalized["low"] > min(
                 normalized["open"],
                 normalized["close"],
