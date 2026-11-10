@@ -1,25 +1,35 @@
 from collector.config import get_settings
-from collector.normalization.market_data import MarketDataNormalizer
 from collector.providers.fmp import FMPClient
+from collector.repositories.market_data import MarketDataRepository
+from collector.service.collector import CollectorService
+from collector.storage.mongo import MongoConnection
 
 
-def main():
-    # Se obtienen las variables de entorno
+def main() -> None:
     settings = get_settings()
-    # se piden los datos
-    with FMPClient(settings) as fmp:
-        records = fmp.get_historical_prices(
-            symbol="^GSPC", start_date="2020-01-01", end_date="2026-11-09"
+
+    with (
+        FMPClient(settings) as fmp,
+        MongoConnection(settings) as mongo,
+    ):
+        repository = MarketDataRepository(mongo.database)
+        repository.ensure_indexes()
+
+        collector = CollectorService(
+            fmp_client=fmp,
+            repository=repository,
         )
-    # validar info recibida
-    print(f"Records received: {len(records)}")
-    if records:
-        print(f"Available fields: {list(records[0].keys())}")
-        print(f"Sample record: {records[0]}")
-    # Normaliza
-    normalized_records = MarketDataNormalizer.normalize_many(records)
-    print(f"Normalized records: {len(normalized_records)}")
-    print(f"Sample: {normalized_records[0]}")
+
+        result = collector.collect_incremental(
+            symbol="^GSPC",
+            overlap_days=3,
+        )
+
+        print("Incremental collection completed")
+        print(f"Matched: {result.matched}")
+        print(f"Modified: {result.modified}")
+        print(f"Upserted: {result.upserted}")
+        print(f"Latest date: {repository.get_latest_date('^GSPC')}")
 
 
 if __name__ == "__main__":
