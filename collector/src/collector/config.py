@@ -5,10 +5,11 @@ from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
 
-PROJECT_ROOT = os.path.abspath(
+import os
+
+PROJECT_ROOT = os.getenv("PROJECT_ROOT") or os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "..", "..")
 )
-
 load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 
