@@ -1,4 +1,5 @@
-from typing import Self 
+from typing import Self
+
 from pymongo import MongoClient
 from pymongo.database import Database
 
