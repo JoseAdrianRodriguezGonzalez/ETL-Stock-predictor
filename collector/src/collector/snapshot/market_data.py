@@ -9,7 +9,6 @@ from collector.manifest import (
     ManifestGenerator,
     ManifestWriter,
 )
-from collector.normalization.market_data import MarketData
 from collector.preprocessing.market_data import MarketDataPreprocessor
 from collector.repositories.market_data import MarketDataRepository
 from collector.validation.market_data import MarketDataValidator
@@ -55,9 +54,7 @@ class SnapshotExporter:
         records = self.repository.get_records(symbol)
 
         if not records:
-            raise ValueError(
-                f"No market data found for symbol {symbol}"
-            )
+            raise ValueError(f"No market data found for symbol {symbol}")
 
         processed_records = MarketDataPreprocessor.sort_by_date(records)
 

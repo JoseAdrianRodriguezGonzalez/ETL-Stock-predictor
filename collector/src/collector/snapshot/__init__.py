@@ -1,5 +1,3 @@
-
-
 from collector.snapshot.market_data import SnapshotExporter, SnapshotResult
 
 __all__ = [

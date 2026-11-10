@@ -102,6 +102,7 @@ class MarketDataRepository:
             return None
 
         return record["date"]
+
     def get_records(self, symbol: str) -> list[MarketData]:
         documents = self.collection.find(
             {"symbol": symbol},
