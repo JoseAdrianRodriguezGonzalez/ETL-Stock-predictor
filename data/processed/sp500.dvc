@@ -1,0 +1,6 @@
+outs:
+- md5: 60483cde9292825fd2f5bfd9cddf8057.dir
+  size: 84596
+  nfiles: 2
+  hash: md5
+  path: sp500

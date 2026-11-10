@@ -1,2 +1,6 @@
 .env
 __pycache__/
+# DVC datasets: ignore actual data, but track DVC metadata
+data/processed/*
+!data/processed/*.dvc
+!data/processed/.gitignore

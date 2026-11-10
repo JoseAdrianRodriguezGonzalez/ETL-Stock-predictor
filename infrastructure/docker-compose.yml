@@ -39,16 +39,21 @@ services:
     container_name: sp500-collector
     profiles: ["jobs"]
     restart: "no"
+    working_dir: /app
 
     environment:
       APP_ENV: ${APP_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PROJECT_ROOT: /app
       FMP_API_KEY: ${FMP_API_KEY:?FMP_API_KEY is required}
       MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongodb:27017/${MONGO_DATABASE:-market_data}?authSource=admin
 
     volumes:
-      - ../data:/data
+      - ../data:/app/data
       - ../.dvc:/app/.dvc
+      - ../../dvc-storage:/dvc-storage
+      - ../.git:/app/.git
+      - ../.gitignore:/app/.gitignore
 
     networks:
       - sp500-network

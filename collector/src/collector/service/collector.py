@@ -22,7 +22,7 @@ class CollectorService:
         self,
         symbol: str,
         start_date: str,
-        end_date: str,
+        end_date: str | None,
     ) -> UpsertResult:
         # 1. Extraer datos del proveedor
         records = self.fmp_client.get_historical_prices(
