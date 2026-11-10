@@ -1,3 +1,4 @@
+from typing import Self 
 from pymongo import MongoClient
 from pymongo.database import Database
 
@@ -21,7 +22,7 @@ class MongoConnection:
     def close(self) -> None:
         self.client.close()
 
-    def __enter__(self) -> "MongoConnection":
+    def __enter__(self) -> Self:
         self.ping()
         return self
 
