@@ -1,10 +1,12 @@
 from datetime import timedelta
+
 from collector.normalization.market_data import MarketDataNormalizer
 from collector.providers.fmp import FMPClient
 from collector.repositories.market_data import (
     MarketDataRepository,
     UpsertResult,
 )
+
 
 class CollectorService:
     def __init__(

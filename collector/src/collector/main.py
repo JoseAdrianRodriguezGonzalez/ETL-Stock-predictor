@@ -4,6 +4,7 @@ from collector.repositories.market_data import MarketDataRepository
 from collector.services.collector import CollectorService
 from collector.storage.mongo import MongoConnection
 
+
 def main() -> None:
     settings = get_settings()
 

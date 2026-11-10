@@ -2,11 +2,12 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from typing import Any
 
-from pymongo import ASCENDING, MongoClient, UpdateOne
+from pymongo import ASCENDING, UpdateOne
 from pymongo.collection import Collection
 from pymongo.database import Database
 
 from collector.normalization.market_data import MarketData
+
 
 @dataclass(frozen=True)
 class UpsertResult:
