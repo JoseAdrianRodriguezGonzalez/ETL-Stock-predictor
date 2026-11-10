@@ -35,6 +35,14 @@ class MarketDataNormalizer:
         missing = cls.REQUIRED_FIELDS - record.keys()
         if missing:
             raise ValueError(f"Missing required market data fields: {sorted(missing)}")
+        null_fields = [
+            field for field in cls.REQUIRED_FIELDS if record[field] is None
+        ]
+
+        if null_fields:
+            raise ValueError(
+                f"Null values in required fields: {sorted(null_fields)}"
+            )
         try:
             normalized = {
                 cls.FIELD_MAPPING.get(key, key): value for key, value in record.items()
@@ -51,14 +59,6 @@ class MarketDataNormalizer:
             ):
                 normalized[field] = float(normalized[field])
             normalized["volume"] = int(normalized["volume"])
-            null_fields = [
-                field for field in cls.REQUIRED_FIELDS if record[field] is None
-            ]
-
-            if null_fields:
-                raise ValueError(
-                    f"Null values in required fields: {sorted(null_fields)}"
-                )
             if not normalized["symbol"].strip():
                 raise ValueError("symbol cannot be empty")
 
