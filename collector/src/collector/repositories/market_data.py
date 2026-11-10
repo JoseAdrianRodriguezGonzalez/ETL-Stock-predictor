@@ -102,3 +102,16 @@ class MarketDataRepository:
             return None
 
         return record["date"]
+    def get_records(self, symbol: str) -> list[MarketData]:
+        documents = self.collection.find(
+            {"symbol": symbol},
+            {"_id": 0},
+        ).sort("date", ASCENDING)
+
+        records: list[MarketData] = []
+
+        for document in documents:
+            document["date"] = document["date"].date()
+            records.append(MarketData(**document))
+
+        return records
