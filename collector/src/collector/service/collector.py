@@ -6,6 +6,7 @@ from collector.repositories.market_data import (
     MarketDataRepository,
     UpsertResult,
 )
+from collector.validation.market_data import MarketDataValidator
 
 
 class CollectorService:
@@ -32,7 +33,11 @@ class CollectorService:
 
         # 2. Normalizar registros
         normalized_records = MarketDataNormalizer.normalize_many(records)
-
+        normalized_records.sort(key=lambda record: record["date"])
+        MarketDataValidator.validate(
+            normalized_records,
+            expected_symbol=symbol,
+        )
         # 3. Persistir en MongoDB
         return self.repository.upsert_many(normalized_records)
 
