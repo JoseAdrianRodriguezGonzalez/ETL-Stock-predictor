@@ -52,9 +52,7 @@ class MarketDataNormalizer:
                 normalized[field] = float(normalized[field])
             normalized["volume"] = int(normalized["volume"])
             null_fields = [
-                field
-                for field in cls.REQUIRED_FIELDS
-                if record[field] is None
+                field for field in cls.REQUIRED_FIELDS if record[field] is None
             ]
 
             if null_fields:

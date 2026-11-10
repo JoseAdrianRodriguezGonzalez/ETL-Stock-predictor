@@ -61,23 +61,18 @@ class MarketDataValidator:
 
                 if not math.isfinite(value):
                     raise MarketDataValidationError(
-                        f"Non-finite value in field '{field}' "
-                        f"at record {index}"
+                        f"Non-finite value in field '{field}' at record {index}"
                     )
 
             if record["volume"] < 0:
-                raise MarketDataValidationError(
-                    f"Negative volume at record {index}"
-                )
+                raise MarketDataValidationError(f"Negative volume at record {index}")
 
             if record["low"] > record["high"]:
                 raise MarketDataValidationError(
-                    f"Invalid price range at record {index}: "
-                    "low must be <= high"
+                    f"Invalid price range at record {index}: low must be <= high"
                 )
 
         if len(symbols) > 1:
             raise MarketDataValidationError(
                 f"Multiple symbols found in dataset: {sorted(symbols)}"
             )
-
