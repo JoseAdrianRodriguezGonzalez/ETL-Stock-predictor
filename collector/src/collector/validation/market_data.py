@@ -1,5 +1,7 @@
 import math
+
 from collector.normalization.market_data import MarketData
+
 
 class MarketDataValidationError(ValueError):
     """Raised when a market data batch violates data quality rules."""

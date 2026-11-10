@@ -8,6 +8,7 @@ from collector.repositories.market_data import (
 )
 from collector.validation.market_data import MarketDataValidator
 
+
 class CollectorService:
     def __init__(
         self,
