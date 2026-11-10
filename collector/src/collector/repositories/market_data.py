@@ -14,6 +14,8 @@ class UpsertResult:
     modified: int
     matched: int
     upserted: int
+
+
 class MarketDataRepository:
     COLLECTION_NAME = "historical_prices"
 

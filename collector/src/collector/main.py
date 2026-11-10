@@ -8,7 +8,7 @@ from collector.storage.mongo import MongoConnection
 def main() -> None:
     settings = get_settings()
 
-    with (FMPClient(settings) as fmp,MongoConnection(settings) as mongo):
+    with FMPClient(settings) as fmp, MongoConnection(settings) as mongo:
         repository = MarketDataRepository(mongo.database)
         repository.ensure_indexes()
 
@@ -30,4 +30,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -57,4 +57,3 @@ class CollectorService:
             start_date=start_date.isoformat(),
             end_date=None,
         )
-
