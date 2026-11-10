@@ -1,5 +1,3 @@
-
-
 import os
 import subprocess
 import sys
@@ -20,9 +18,7 @@ class DVCVersioner:
         self._dataset_file: str | None = None
 
         if not os.path.isdir(os.path.join(self.repo_root, ".dvc")):
-            raise ValueError(
-                f"No DVC repository found at {self.repo_root}"
-            )
+            raise ValueError(f"No DVC repository found at {self.repo_root}")
 
     def _run(self, *args: str) -> None:
         command = [sys.executable, "-m", "dvc", *args]
@@ -43,9 +39,7 @@ class DVCVersioner:
                 f"Error: {exc.stderr or ''}"
             ) from exc
         except OSError as exc:
-            raise DVCError(
-                f"Could not execute DVC command: {exc}"
-            ) from exc
+            raise DVCError(f"Could not execute DVC command: {exc}") from exc
 
         if result.stdout.strip():
             print(result.stdout.strip())
@@ -54,21 +48,13 @@ class DVCVersioner:
         if os.path.isabs(dataset_path):
             absolute_path = os.path.abspath(dataset_path)
         else:
-            absolute_path = os.path.abspath(
-                os.path.join(self.repo_root, dataset_path)
-            )
+            absolute_path = os.path.abspath(os.path.join(self.repo_root, dataset_path))
 
-        if os.path.commonpath(
-            [self.repo_root, absolute_path]
-        ) != self.repo_root:
-            raise ValueError(
-                "Dataset path must be inside the DVC repository"
-            )
+        if os.path.commonpath([self.repo_root, absolute_path]) != self.repo_root:
+            raise ValueError("Dataset path must be inside the DVC repository")
 
         if not os.path.exists(absolute_path):
-            raise FileNotFoundError(
-                f"Dataset path does not exist: {absolute_path}"
-            )
+            raise FileNotFoundError(f"Dataset path does not exist: {absolute_path}")
 
         return absolute_path
 
@@ -87,8 +73,7 @@ class DVCVersioner:
     def push(self) -> None:
         if self._dataset_file is None:
             raise DVCError(
-                "No dataset has been versioned. "
-                "Call version_dataset() before push()."
+                "No dataset has been versioned. Call version_dataset() before push()."
             )
 
         arguments = ["push", self._dataset_file]
@@ -97,4 +82,3 @@ class DVCVersioner:
             arguments.extend(["-r", self.remote])
 
         self._run(*arguments)
-
