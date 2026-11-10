@@ -8,6 +8,7 @@ from collector.snapshot import SnapshotExporter
 from collector.storage.mongo import MongoConnection
 from collector.versioning import DVCVersioner
 
+
 def main() -> None:
     settings = get_settings()
 
