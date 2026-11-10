@@ -1,3 +1,6 @@
+
+
+
 from datetime import date
 from unittest.mock import MagicMock
 
@@ -9,7 +12,7 @@ from collector.repositories.market_data import (
     MarketDataRepository,
     UpsertResult,
 )
-from collector.services.collector import CollectorService
+from collector.service.collector import CollectorService
 
 
 @pytest.fixture
