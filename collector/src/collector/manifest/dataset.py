@@ -36,9 +36,7 @@ class DatasetManifest:
             "source": self.source,
             "symbol": self.symbol,
             "collected_at": (
-                self.collected_at.astimezone(UTC)
-                .isoformat()
-                .replace("+00:00", "Z")
+                self.collected_at.astimezone(UTC).isoformat().replace("+00:00", "Z")
             ),
             "period": self.period.to_dict(),
             "frequency": self.frequency,
@@ -66,9 +64,7 @@ class ManifestGenerator:
         symbols = {record["symbol"] for record in records}
 
         if len(symbols) != 1:
-            raise ValueError(
-                "All records must belong to the same symbol"
-            )
+            raise ValueError("All records must belong to the same symbol")
 
         if not dataset.strip():
             raise ValueError("dataset cannot be empty")
