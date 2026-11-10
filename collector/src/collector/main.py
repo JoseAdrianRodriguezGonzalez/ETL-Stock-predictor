@@ -1,5 +1,3 @@
-
-
 from collector.config import get_settings
 from collector.providers.fmp import FMPClient
 from collector.repositories.market_data import MarketDataRepository
@@ -36,4 +34,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
