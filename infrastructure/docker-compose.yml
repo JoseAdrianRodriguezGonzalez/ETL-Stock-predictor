@@ -88,6 +88,8 @@ services:
 
       # Configuraciones disponibles sin reconstruir la imagen
       - ../training/configs:/app/configs:ro
+      - ../deployment/model_repository:/app/deployment/model_repository
+      - ../deployment/assets:/app/deployment/assets
 
     networks:
       - sp500-network
@@ -165,6 +167,33 @@ services:
       interval: 15s
       timeout: 5s
       retries: 5
+      start_period: 30s
+  triton:
+    image: nvcr.io/nvidia/tritonserver:25.08-py3
+    container_name: sp500-triton
+    restart: unless-stopped
+
+    command:
+      - tritonserver
+      - --model-repository=/models
+      - --model-control-mode=poll
+      - --repository-poll-secs=30
+
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+
+    volumes:
+      - ../deployment/model_repository:/models:ro
+
+    devices:
+      - "nvidia.com/gpu=all"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v2/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
       start_period: 30s
 networks:
   sp500-network:
