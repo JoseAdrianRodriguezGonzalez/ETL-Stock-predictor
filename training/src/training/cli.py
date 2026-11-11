@@ -7,7 +7,7 @@ from training.config import PROJECT_ROOT, load_config
 from training.main import run_experiment
 from training.search import run_random_search
 
-
+from training.deployment.export_model import export_champion
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="S&P 500 forecasting experiments"
@@ -23,7 +23,7 @@ def main() -> None:
     parser.add_argument(
         "--mode",
         type=str,
-        choices=["single", "search"],
+        choices=["single", "search","export"],
         default="single",
         help="Execution mode",
     )
@@ -50,7 +50,12 @@ def main() -> None:
             search_config=config,
             project_root=project_root,
         )
+    elif args.mode == "export":
 
+        export_champion(
+            config=config,
+            project_root=project_root,
+        )
 
 if __name__ == "__main__":
     main()

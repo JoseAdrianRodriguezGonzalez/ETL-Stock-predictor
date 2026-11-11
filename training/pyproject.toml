@@ -18,6 +18,8 @@ dependencies = [
     "pyyaml>=6.0.3",
     "scikit-learn>=1.9.1",
     "torch>=2.14.1",
+    "onnx>=1.16,<2",
+    "onnxruntime>=1.18,<2",
 ]
 
 [project.scripts]

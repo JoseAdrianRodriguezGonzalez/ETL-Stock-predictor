@@ -32,4 +32,14 @@ tracking:
   enabled: true
   experiment_name: sp500_forecasting
   register_model: false
+deployment:
+  alias: champion
+  model_name: sp500_forecasting
+
+  model_repository: deployment/model_repository
+  artifact_directory: deployment/assets
+
+  scaler_artifact_path: outputs/preprocessing/scaler.joblib
+
+  opset_version: 17
 
