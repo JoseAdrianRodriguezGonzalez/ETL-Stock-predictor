@@ -1,6 +1,7 @@
 import os
 import random
-
+import pandas as pd 
+from training.tracking.mlflow_tracker import MLflowTracker
 import numpy as np
 import torch
 import torch.nn as nn
@@ -23,7 +24,7 @@ from training.evaluation.plots import (
     plot_residuals,
     plot_prediction_scatter,
 )
-def run_experiment(config: dict, project_root: str) -> dict:
+def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker) -> dict:
     seed = config["experiment"]["seed"]
 
     random.seed(seed)
@@ -50,7 +51,14 @@ def run_experiment(config: dict, project_root: str) -> dict:
         dataset_path=dataset_path,
         expected_symbol=data_config["symbol"],
     )
-
+    result.preprocessor.save(
+        os.path.join(
+            project_root,
+            "artifacts",
+            "preprocessing",
+            "scaler.joblib",
+        )
+    )
     train_dataset = MarketTensorDataset(
         result.train.X,
         result.train.y,
@@ -148,7 +156,14 @@ def run_experiment(config: dict, project_root: str) -> dict:
         checkpoint_config["directory"],
         checkpoint_config["filename"],
     )
-
+    tracker.log_tags(
+        {
+            "model_architecture": model_config["name"],
+            "dataset_symbol": data_config["symbol"],
+            "device": str(device),
+            "seed": str(seed),
+        }
+    )
     history = fit(
         model=model,
         train_loader=train_loader,
@@ -161,6 +176,7 @@ def run_experiment(config: dict, project_root: str) -> dict:
         scheduler=scheduler,
         checkpoint_path=checkpoint_path,
         config=config,
+        on_epoch_end=tracker.log_epoch_metrics
     )
 
     print(f"Best checkpoint: {checkpoint_path}")
@@ -175,6 +191,20 @@ def run_experiment(config: dict, project_root: str) -> dict:
     baseline_results = persistence_baseline(
         model_results["y_true"],
     )
+
+    predictions_df = pd.DataFrame({
+        "target_date": result.test.target_dates,
+        "y_true": model_results["y_true"],
+        "y_pred": model_results["y_pred"],
+    })
+
+    predictions_df["residual"] = (
+        predictions_df["y_true"] - predictions_df["y_pred"]
+    )
+
+
+
+
     print("\nTest Results")
 
     for metric, value in model_results["metrics"].items():
@@ -200,6 +230,26 @@ def run_experiment(config: dict, project_root: str) -> dict:
     diagnostics = prediction_diagnostics(
         model_results["y_true"],
         model_results["y_pred"],
+    )
+    tracker.log_metrics(
+        {
+            f"test_{name}": value
+            for name, value in model_results["metrics"].items()
+        }
+    )
+
+    tracker.log_metrics(
+        {
+            f"baseline_{name}": value
+            for name, value in baseline_results["metrics"].items()
+        }
+    )
+
+    tracker.log_metrics(
+        {
+            f"diagnostics_{name}": value
+            for name, value in diagnostics.items()
+        }
     )
 
     print("\nPrediction Diagnostics")
@@ -244,3 +294,30 @@ def run_experiment(config: dict, project_root: str) -> dict:
         "evaluation": model_results,
         "baseline": baseline_results,
     }
+def run_experiment(config: dict, project_root: str) -> dict:
+    tracking_config = config.get("tracking", {})
+
+    tracker = MLflowTracker(
+        enabled=tracking_config.get("enabled", True),
+        experiment_name=tracking_config.get(
+            "experiment_name",
+            "sp500_forecasting",
+        ),
+    )
+
+    with tracker.start_run(
+        run_name=config["experiment"]["name"],
+    ) as run:
+
+        tracker.log_config(config)
+
+        result = _run_experiment(
+            config=config,
+            project_root=project_root,
+            tracker=tracker,
+        )
+
+        if run is not None:
+            result["mlflow_run_id"] = run.info.run_id
+
+        return result

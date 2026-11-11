@@ -1,8 +1,11 @@
 
-
 experiment:
   name: lstm_baseline
   seed: 42
+
+tracking:
+  enabled: true
+  experiment_name: sp500_forecasting
 
 data:
   path: data/processed/sp500/historical.parquet
