@@ -1,16 +1,26 @@
 
 
-from pathlib import Path
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 
+def _save_figure(fig: plt.Figure, output_path: str) -> None:
+    output_dir = os.path.dirname(output_path)
+
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150)
+    plt.close(fig)
+
+
 def plot_training_history(
     history: dict,
-    output_path: str | Path,
+    output_path: str,
 ) -> None:
-
     epochs = range(1, len(history["train_loss"]) + 1)
 
     fig, ax = plt.subplots(figsize=(10, 5))
@@ -24,18 +34,15 @@ def plot_training_history(
     ax.legend()
     ax.grid(alpha=0.3)
 
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
+    _save_figure(fig, output_path)
 
 
 def plot_predictions(
     y_true: np.ndarray,
     y_pred: np.ndarray,
     target_dates: np.ndarray,
-    output_path: str | Path,
+    output_path: str,
 ) -> None:
-
     fig, ax = plt.subplots(figsize=(12, 5))
 
     ax.plot(target_dates, y_true, label="Actual", alpha=0.8)
@@ -48,23 +55,19 @@ def plot_predictions(
     ax.grid(alpha=0.3)
 
     fig.autofmt_xdate()
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
+    _save_figure(fig, output_path)
 
 
 def plot_residuals(
     y_true: np.ndarray,
     y_pred: np.ndarray,
-    output_path: str | Path,
+    output_path: str,
 ) -> None:
-
     residuals = y_true - y_pred
 
     fig, ax = plt.subplots(figsize=(9, 5))
 
     ax.hist(residuals, bins=30)
-
     ax.axvline(0, linestyle="--", label="Zero Error")
 
     ax.set_title("Residual Distribution")
@@ -73,17 +76,14 @@ def plot_residuals(
     ax.legend()
     ax.grid(alpha=0.3)
 
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
+    _save_figure(fig, output_path)
 
 
 def plot_prediction_scatter(
     y_true: np.ndarray,
     y_pred: np.ndarray,
-    output_path: str | Path,
+    output_path: str,
 ) -> None:
-
     fig, ax = plt.subplots(figsize=(7, 7))
 
     ax.scatter(y_true, y_pred, alpha=0.6)
@@ -104,6 +104,5 @@ def plot_prediction_scatter(
     ax.legend()
     ax.grid(alpha=0.3)
 
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150)
-    plt.close(fig)
+    _save_figure(fig, output_path)
+

@@ -1,3 +1,5 @@
+import joblib
+import os
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
@@ -125,3 +127,37 @@ class MarketDataPreprocessor:
         )
 
         return self.transform(df)
+    def save(self, filepath: str) -> None:
+        if not self.is_fitted:
+            raise RuntimeError(
+                "Cannot save an unfitted preprocessor"
+            )
+
+        os.makedirs(
+            os.path.dirname(filepath) or ".",
+            exist_ok=True,
+        )
+
+        joblib.dump(
+            {
+                "scaler": self.scaler,
+                "feature_columns": self.feature_columns,
+            },
+            filepath,
+        )
+
+    @classmethod
+    def load(cls, filepath: str) -> "MarketDataPreprocessor":
+        if not os.path.isfile(filepath):
+            raise FileNotFoundError(
+                f"Preprocessor artifact not found: {filepath}"
+            )
+
+        artifact = joblib.load(filepath)
+
+        preprocessor = cls()
+        preprocessor.scaler = artifact["scaler"]
+        preprocessor.feature_columns = artifact["feature_columns"]
+        preprocessor.is_fitted = True
+
+        return preprocessor

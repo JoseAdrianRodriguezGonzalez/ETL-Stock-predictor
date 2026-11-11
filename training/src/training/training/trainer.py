@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-
+from collections.abc import Callable
 from training.training.early_stopping import EarlyStopping
 from training.training.checkpoints import save_checkpoint
 
@@ -97,6 +97,7 @@ def fit(
     scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau | None = None,
     checkpoint_path: str | None = None,
     config: dict | None = None,
+    on_epoch_end: Callable[[int, dict[str, float]], None] | None = None,
 ) -> dict[str, list[float]]:
 
     if num_epochs <= 0:
@@ -152,7 +153,15 @@ def fit(
         history["train_loss"].append(train_loss)
         history["val_loss"].append(val_loss)
         history["learning_rate"].append(current_lr)
-
+        if on_epoch_end is not None:
+            on_epoch_end(
+                epoch + 1,
+                {
+                    "train_loss": train_loss,
+                    "val_loss": val_loss,
+                    "learning_rate": current_lr,
+                },
+            )
         print(f"Epoch {epoch + 1}/{num_epochs}")
         print(f"  Train loss: {train_loss:.8f}")
         print(f"  Val loss:   {val_loss:.8f}")

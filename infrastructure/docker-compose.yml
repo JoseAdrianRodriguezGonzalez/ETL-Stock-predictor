@@ -76,6 +76,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       PROJECT_ROOT: /app
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     devices:
       - nvidia.com/gpu=all
     volumes:
@@ -90,31 +91,81 @@ services:
 
     networks:
       - sp500-network
+    depends_on:
+      mlflow:
+        condition: service_healthy
+  
 
-
-  training-dev:
-    build:
-      context: ..
-      dockerfile: training/Dockerfile.dev
-
-    container_name: sp500-training-dev
-    profiles: ["dev"]
-    restart: "no"
-    working_dir: /app
+  mlflow-db:
+    image: postgres:16-alpine
+    container_name: sp500-mlflow-db
+    restart: unless-stopped
 
     environment:
-      APP_ENV: development
-      LOG_LEVEL: DEBUG
-      PROJECT_ROOT: /app
-  
+      POSTGRES_DB: ${MLFLOW_DB_NAME:-mlflow}
+      POSTGRES_USER: ${MLFLOW_DB_USER:-mlflow}
+      POSTGRES_PASSWORD: ${MLFLOW_DB_PASSWORD:?MLFLOW_DB_PASSWORD is required}
+
     volumes:
-      - ../training/src:/app/src
-      - ../training/configs:/app/configs:ro
-      - ../data:/app/data:ro
-      - ../artifacts:/app/artifacts
+      - mlflow_db_data:/var/lib/postgresql/data
 
     networks:
       - sp500-network
+
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${MLFLOW_DB_USER:-mlflow} -d ${MLFLOW_DB_NAME:-mlflow}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  mlflow:
+    build:
+      context: ..
+      dockerfile: mlflow/Dockerfile
+      args:
+        MLFLOW_VERSION: ${MLFLOW_VERSION:-3.18.0}
+
+    container_name: sp500-mlflow
+    restart: unless-stopped
+    environment:
+      MLFLOW_SERVER_ALLOWED_HOSTS: "mlflow:5000,localhost:*,127.0.0.1:*"
+    command:
+      - server
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --backend-store-uri
+      - postgresql+psycopg2://${MLFLOW_DB_USER:-mlflow}:${MLFLOW_DB_PASSWORD}@mlflow-db:5432/${MLFLOW_DB_NAME:-mlflow}
+      - --artifacts-destination
+      - /mlartifacts
+
+    ports:
+      - "127.0.0.1:${MLFLOW_PORT:-5000}:5000"
+
+    volumes:
+      - mlflow_artifacts:/mlartifacts
+
+    networks:
+      - sp500-network
+
+    depends_on:
+      mlflow-db:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 networks:
   sp500-network:
     name: sp500-network
@@ -123,3 +174,5 @@ networks:
 volumes:
   mongodb_data:
     name: sp500-mongodb-data
+  mlflow_db_data:
+  mlflow_artifacts:

@@ -3,7 +3,11 @@
 experiment:
   name: rnn_baseline
   seed: 42
-
+tracking:
+  enabled: true
+  experiment_name: sp500_forecasting
+  register_model: false
+  registered_model_name: sp500_forecasting
 data:
   path: data/processed/sp500/historical.parquet
   symbol: "^GSPC"
