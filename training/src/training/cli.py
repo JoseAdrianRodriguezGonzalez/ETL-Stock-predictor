@@ -1,8 +1,11 @@
+
+
 import argparse
 import os
 
-from training.config import PROJECT_ROOT,load_config
+from training.config import PROJECT_ROOT, load_config
 from training.main import run_experiment
+from training.search import run_random_search
 
 
 def main() -> None:
@@ -17,6 +20,14 @@ def main() -> None:
         help="Path to experiment YAML configuration",
     )
 
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["single", "search"],
+        default="single",
+        help="Execution mode",
+    )
+
     args = parser.parse_args()
 
     project_root = PROJECT_ROOT
@@ -28,11 +39,19 @@ def main() -> None:
 
     config = load_config(config_path)
 
-    run_experiment(
-        config=config,
-        project_root=project_root,
-    )
+    if args.mode == "single":
+        run_experiment(
+            config=config,
+            project_root=project_root,
+        )
+
+    elif args.mode == "search":
+        run_random_search(
+            search_config=config,
+            project_root=project_root,
+        )
 
 
 if __name__ == "__main__":
     main()
+

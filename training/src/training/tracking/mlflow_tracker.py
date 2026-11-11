@@ -6,7 +6,8 @@ from typing import Iterator
 
 import mlflow
 import torch
-
+from mlflow import MlflowClient
+from mlflow.exceptions import MlflowException
 class MLflowTracker:
     def __init__(
         self,
@@ -185,4 +186,110 @@ class MLflowTracker:
             signature=signature,
             input_example=input_example,
             serialization_format=serialization_format,
+        )
+
+
+    def get_champion(
+        self,
+        registered_model_name: str,
+        alias: str = "champion",
+    ):
+        """
+        Retrieve the model version currently assigned to an alias.
+        Returns None if no champion exists.
+        """
+
+        if not self.enabled:
+            return None
+
+        client = MlflowClient()
+
+        try:
+            return client.get_model_version_by_alias(
+                name=registered_model_name,
+                alias=alias,
+            )
+        except MlflowException as error:
+            # No registered model or alias exists yet.
+            if error.error_code == "RESOURCE_DOES_NOT_EXIST":
+                return None
+            raise
+
+    def register_model_from_run(
+        self,
+        run_id: str,
+        registered_model_name: str,
+        model_name: str = "forecasting_model",
+        metrics: dict | None = None,
+        tags: dict | None = None,
+    ):
+        """
+        Register an existing model artifact from an MLflow run.
+        """
+
+        if not self.enabled:
+            return None
+
+        model_uri = f"runs:/{run_id}/{model_name}"
+
+        registered_version = mlflow.register_model(
+            model_uri=model_uri,
+            name=registered_model_name,
+        )
+
+        client = MlflowClient()
+
+        version = registered_version.version
+
+        if metrics:
+            for metric_name, value in metrics.items():
+                if value is not None:
+                    client.set_model_version_tag(
+                        name=registered_model_name,
+                        version=version,
+                        key=metric_name,
+                        value=str(value),
+                    )
+
+        if tags:
+            for tag_name, value in tags.items():
+                if value is not None:
+                    client.set_model_version_tag(
+                        name=registered_model_name,
+                        version=version,
+                        key=tag_name,
+                        value=str(value),
+                    )
+
+        print(
+            f"Registered model: {registered_model_name} "
+            f"(version {version})"
+        )
+
+        return registered_version
+
+    def promote_model(
+        self,
+        registered_model_name: str,
+        version: str,
+        alias: str = "champion",
+    ) -> None:
+        """
+        Assign an alias to a registered model version.
+        """
+
+        if not self.enabled:
+            return
+
+        client = MlflowClient()
+
+        client.set_registered_model_alias(
+            name=registered_model_name,
+            alias=alias,
+            version=version,
+        )
+
+        print(
+            f"Promoted {registered_model_name} version {version} "
+            f"to alias '{alias}'."
         )
