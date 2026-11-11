@@ -1,7 +1,7 @@
 
 
-from training.models.rnn import RNNForecaster
-from training.models.lstm import LSTMForecaster
+from training.model.RNN import RNNForecaster
+from training.model.LSTM import LSTMForecaster
 
 
 MODEL_DEFAULTS = {

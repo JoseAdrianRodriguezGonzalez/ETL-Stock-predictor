@@ -1,59 +1,49 @@
 import os
-import torch.nn as nn
-from training.pipelines.data_pipeline import MarketDataPipeline
+import random
+
+import numpy as np
 import torch
+import torch.nn as nn
+
 from training.datasets.pytorch import (
     MarketTensorDataset,
     create_dataloader,
-     get_device,
-    move_batch_to_device,
+    get_device,
 )
-from training.model.get_model import get_model
+from training.model.factory import get_model
+from training.pipelines.data_pipeline import MarketDataPipeline
 from training.training.trainer import fit
 from training.training.early_stopping import EarlyStopping
-def main(name_model) -> None:
-    project_root = os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-        )
-    )
+
+
+def run_experiment(config: dict, project_root: str) -> dict:
+    seed = config["experiment"]["seed"]
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+    data_config = config["data"]
+    model_config = config["model"]
+    training_config = config["training"]
 
     dataset_path = os.path.join(
         project_root,
-        "data",
-        "processed",
-        "sp500",
-        "historical.parquet",
+        data_config["path"],
     )
 
     pipeline = MarketDataPipeline(
-        sequence_length=30,
+        sequence_length=data_config["sequence_length"],
     )
 
     result = pipeline.run(
         dataset_path=dataset_path,
-        expected_symbol="^GSPC",
+        expected_symbol=data_config["symbol"],
     )
 
-    for name, dataset in [
-        ("Train", result.train),
-        ("Validation", result.validation),
-        ("Test", result.test),
-    ]:
-        print(f"\n{name}")
-        print(f"X shape: {dataset.X.shape}")
-        print(f"y shape: {dataset.y.shape}")
-        print(f"Samples: {dataset.n_samples}")
-
-        print(
-            f"Target dates: "
-            f"{dataset.target_dates[0]} -> "
-            f"{dataset.target_dates[-1]}"
-        )
-   # Convert NumPy windows to PyTorch datasets
     train_dataset = MarketTensorDataset(
         result.train.X,
         result.train.y,
@@ -69,45 +59,89 @@ def main(name_model) -> None:
         result.test.y,
     )
 
-# Create DataLoaders
+    batch_size = data_config["batch_size"]
+
     train_loader = create_dataloader(
         train_dataset,
-        batch_size=32,
+        batch_size=batch_size,
     )
 
     validation_loader = create_dataloader(
         validation_dataset,
-        batch_size=32,
+        batch_size=batch_size,
     )
 
     test_loader = create_dataloader(
         test_dataset,
-        batch_size=32,
+        batch_size=batch_size,
     )
 
-# Inspect one batch
-    device = get_device()
+    requested_device = training_config["device"]
 
-    print("\nDEVICE")
-    print(f"Selected device: {device}")
-    model=get_model(name_model)
-    model=model.to(device)
+    if requested_device == "auto":
+        device = get_device()
+    else:
+        device = torch.device(requested_device)
+
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise RuntimeError("CUDA was requested but is unavailable")
+
+    print(f"Experiment: {config['experiment']['name']}")
+    print(f"Device: {device}")
+
     if device.type == "cuda":
         print(f"GPU: {torch.cuda.get_device_name(device)}")
-    criterion= nn.MSELoss()
-    optimizer=torch.optim.Adam(model.parameters(),lr=1e-3,weight_decay=1e-5)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer,
-        mode="min",
-        factor=0.5,
-        patience=3,
-        min_lr=1e-6,
-    )
- 
+
+    model = get_model(
+        model_config["name"],
+        **model_config["params"],
+    ).to(device)
+
+    loss_name = training_config["loss"].lower()
+
+    if loss_name == "mse":
+        criterion = nn.MSELoss()
+    elif loss_name == "smooth_l1":
+        criterion = nn.SmoothL1Loss()
+    else:
+        raise ValueError(f"Unknown loss: {loss_name}")
+
+    optimizer_config = training_config["optimizer"]
+
+    if optimizer_config["name"].lower() == "adam":
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            **optimizer_config["params"],
+        )
+    else:
+        raise ValueError(
+            f"Unknown optimizer: {optimizer_config['name']}"
+        )
+
+    scheduler_config = training_config["scheduler"]
+
+    scheduler = None
+
+    if scheduler_config["name"] == "reduce_on_plateau":
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            **scheduler_config["params"],
+        )
+
+    stopping_config = training_config["early_stopping"]
+
     early_stopping = EarlyStopping(
-        patience=7,
-        min_delta=1e-6,
+        **stopping_config,
     )
+
+    checkpoint_config = config["checkpoint"]
+
+    checkpoint_path = os.path.join(
+        project_root,
+        checkpoint_config["directory"],
+        checkpoint_config["filename"],
+    )
+
     history = fit(
         model=model,
         train_loader=train_loader,
@@ -115,11 +149,20 @@ def main(name_model) -> None:
         criterion=criterion,
         optimizer=optimizer,
         device=device,
-        num_epochs=3,
+        num_epochs=training_config["epochs"],
         early_stopping=early_stopping,
         scheduler=scheduler,
+        checkpoint_path=checkpoint_path,
+        config=config,
     )
-if __name__ == "__main__":
-    main(name_model="rnn")
-    main(name_model="lstm")
+
+    print(f"Best checkpoint: {checkpoint_path}")
+
+    return {
+        "history": history,
+        "model": model,
+        "test_loader": test_loader,
+        "device": device,
+        "checkpoint_path": checkpoint_path,
+    }
 

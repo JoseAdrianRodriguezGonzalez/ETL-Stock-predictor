@@ -24,6 +24,7 @@ class EarlyStopping:
         self.best_loss = float("inf")
         self.counter = 0
         self.early_stop = False
+        self.improved= False
         self.best_model_state = None
 
     def __call__(
@@ -31,10 +32,11 @@ class EarlyStopping:
         model: nn.Module,
         val_loss: float,
     ) -> None:
+        self.improved= False
         if val_loss < self.best_loss - self.min_delta:
             self.best_loss = val_loss
             self.counter = 0
-
+            self.improved=True
             self.best_model_state = {
                 key: value.detach().cpu().clone()
                 for key, value in model.state_dict().items()

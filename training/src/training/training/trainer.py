@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from training.training.early_stopping import EarlyStopping
+from training.training.checkpoints import save_checkpoint
 
 
 def train_one_epoch(
@@ -94,9 +95,17 @@ def fit(
     num_epochs: int,
     early_stopping: EarlyStopping | None = None,
     scheduler: torch.optim.lr_scheduler.ReduceLROnPlateau | None = None,
+    checkpoint_path: str | None = None,
+    config: dict | None = None,
 ) -> dict[str, list[float]]:
+
     if num_epochs <= 0:
         raise ValueError("num_epochs must be positive")
+
+    if checkpoint_path is not None and early_stopping is None:
+        raise ValueError(
+            "EarlyStopping is required when saving best checkpoints"
+        )
 
     history = {
         "train_loss": [],
@@ -107,8 +116,6 @@ def fit(
     model.to(device)
 
     for epoch in range(num_epochs):
-        current_lr = optimizer.param_groups[0]["lr"]
-
         train_loss = train_one_epoch(
             model=model,
             dataloader=train_loader,
@@ -124,6 +131,24 @@ def fit(
             device=device,
         )
 
+        if scheduler is not None:
+            scheduler.step(val_loss)
+
+        if early_stopping is not None:
+            early_stopping(model, val_loss)
+
+            if early_stopping.improved and checkpoint_path is not None:
+                save_checkpoint(
+                    path=checkpoint_path,
+                    model=model,
+                    optimizer=optimizer,
+                    epoch=epoch + 1,
+                    val_loss=val_loss,
+                    config=config or {},
+                )
+
+        current_lr = optimizer.param_groups[0]["lr"]
+
         history["train_loss"].append(train_loss)
         history["val_loss"].append(val_loss)
         history["learning_rate"].append(current_lr)
@@ -133,17 +158,12 @@ def fit(
         print(f"  Val loss:   {val_loss:.8f}")
         print(f"  LR:         {current_lr:.2e}")
 
-        if scheduler is not None:
-            scheduler.step(val_loss)
-
-        if early_stopping is not None:
-            early_stopping(model, val_loss)
-
-            if early_stopping.early_stop:
-                print("Early stopping triggered.")
-                break
+        if early_stopping is not None and early_stopping.early_stop:
+            print("Early stopping triggered.")
+            break
 
     if early_stopping is not None:
         early_stopping.restore_model(model)
 
     return history
+
