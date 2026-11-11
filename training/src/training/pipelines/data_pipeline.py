@@ -27,6 +27,7 @@ class MarketDataResult:
     validation: TemporalWindows
     test: TemporalWindows
     split: TemporalSplit
+    preprocessor: MarketDataPreprocessor
 
 
 class MarketDataPipeline:
@@ -100,5 +101,6 @@ class MarketDataPipeline:
             validation=validation,
             test=test,
             split=split,
+            preprocessor=self.preprocessor
         )
 
