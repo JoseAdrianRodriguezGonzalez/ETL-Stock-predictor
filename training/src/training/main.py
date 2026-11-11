@@ -1,5 +1,5 @@
 import os
-
+import torch.nn as nn
 from training.pipelines.data_pipeline import MarketDataPipeline
 import torch
 from training.datasets.pytorch import (
@@ -8,9 +8,10 @@ from training.datasets.pytorch import (
      get_device,
     move_batch_to_device,
 )
-
-
-def main() -> None:
+from training.model.get_model import get_model
+from training.training.trainer import fit
+from training.training.early_stopping import EarlyStopping
+def main(name_model) -> None:
     project_root = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
@@ -89,23 +90,36 @@ def main() -> None:
 
     print("\nDEVICE")
     print(f"Selected device: {device}")
-
+    model=get_model(name_model)
+    model=model.to(device)
     if device.type == "cuda":
         print(f"GPU: {torch.cuda.get_device_name(device)}")
-
-    X_batch, y_batch = next(iter(train_loader))
-
-    X_batch, y_batch = move_batch_to_device(
-        X_batch,
-        y_batch,
-        device,
+    criterion= nn.MSELoss()
+    optimizer=torch.optim.Adam(model.parameters(),lr=1e-3,weight_decay=1e-5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=0.5,
+        patience=3,
+        min_lr=1e-6,
     )
-
-    print("\nGPU BATCH INSPECTION")
-    print(f"X shape: {X_batch.shape}")
-    print(f"y shape: {y_batch.shape}")
-    print(f"X device: {X_batch.device}")
-    print(f"y device: {y_batch.device}")
+ 
+    early_stopping = EarlyStopping(
+        patience=7,
+        min_delta=1e-6,
+    )
+    history = fit(
+        model=model,
+        train_loader=train_loader,
+        val_loader=validation_loader,
+        criterion=criterion,
+        optimizer=optimizer,
+        device=device,
+        num_epochs=3,
+        early_stopping=early_stopping,
+        scheduler=scheduler,
+    )
 if __name__ == "__main__":
-    main()
+    main(name_model="rnn")
+    main(name_model="lstm")
 
