@@ -88,6 +88,8 @@ services:
 
       # Configuraciones disponibles sin reconstruir la imagen
       - ../training/configs:/app/configs:ro
+      - ../deployment/model_repository:/app/deployment/model_repository
+      - ../deployment/assets:/app/deployment/assets
 
     networks:
       - sp500-network

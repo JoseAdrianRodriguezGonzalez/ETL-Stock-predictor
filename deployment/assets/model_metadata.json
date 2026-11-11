@@ -1,0 +1,19 @@
+{
+    "registered_model_name": "sp500_forecasting",
+    "model_version": "1",
+    "alias": "champion",
+    "run_id": "3a821fde6fcb445fb296ddcd27899af1",
+    "architecture": "lstm",
+    "sequence_length": 30,
+    "input_size": 6,
+    "feature_columns": [
+        "daily_return",
+        "overnight_gap",
+        "intraday_return",
+        "high_low_range",
+        "log_volume",
+        "vwap_deviation"
+    ],
+    "scaler_path": "assets/scaler.joblib",
+    "onnx_path": "/app/deployment/model_repository/sp500_forecasting/1/model.onnx"
+}
