@@ -17,7 +17,7 @@ from training.training.trainer import fit
 from training.training.early_stopping import EarlyStopping
 from training.evaluation.evaluator import evaluate_model
 from training.evaluation.metrics import prediction_diagnostics
-from training.evaluation.baselines import persistence_baseline
+from training.evaluation.baselines import persistence_baseline,mean_baseline
 from training.evaluation.plots import (
     plot_training_history,
     plot_predictions,
@@ -110,7 +110,25 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker,run_id
         test_dataset,
         batch_size=batch_size,
     )
+    # --------------------------------------------------
+# Evaluation configuration
+# --------------------------------------------------
 
+    evaluation_config = config.get("evaluation", {})
+    evaluation_split = evaluation_config.get("split", "test")
+
+    if evaluation_split == "validation":
+        evaluation_loader = validation_loader
+        evaluation_data = result.validation
+
+    elif evaluation_split == "test":
+        evaluation_loader = test_loader
+        evaluation_data = result.test
+
+    else:
+        raise ValueError(
+            f"Unknown evaluation split: {evaluation_split}"
+        )
     requested_device = training_config["device"]
 
     if requested_device == "auto":
@@ -206,16 +224,19 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker,run_id
 # Evaluation
     model_results = evaluate_model(
         model=model,
-        dataloader=test_loader,
+        dataloader=evaluation_loader,
         device=device,
     )
 
     baseline_results = persistence_baseline(
         model_results["y_true"],
     )
-
+    mean_baseline_results = mean_baseline(
+        y_train=result.train.y,
+        y_true=model_results["y_true"],
+    )
     predictions_df = pd.DataFrame({
-        "target_date": result.test.target_dates,
+        "target_date": evaluation_data.target_dates,
         "y_true": model_results["y_true"],
         "y_pred": model_results["y_pred"],
     })
@@ -228,8 +249,7 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker,run_id
     predictions_df.to_csv(predictions_path, index=False)
 
 
-    print("\nTest Results")
-
+    print(f"\n{evaluation_split.capitalize()} Results")
     for metric, value in model_results["metrics"].items():
         if value is None:
             print(f"{metric}: N/A")
@@ -250,11 +270,14 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker,run_id
         model_results["y_pred"],
     )
     metrics_report = {
+        "evaluation_split": evaluation_split,
         "model": model_results["metrics"],
-        "baseline": baseline_results["metrics"],
+        "baselines": {
+            "persistence": baseline_results["metrics"],
+            "mean": mean_baseline_results["metrics"],
+        },
         "diagnostics": diagnostics,
     }
-
     metrics_path = os.path.join(
         evaluation_dir,
         "metrics.json",
@@ -280,24 +303,36 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker,run_id
 
     tracker.log_metrics(
         {
-            f"test_{name}": value
+            f"{'val' if evaluation_split == 'validation' else 'test'}_{name}": value
             for name, value in model_results["metrics"].items()
         }
     )
 
     tracker.log_metrics(
-        {
-            f"baseline_{name}": value
-            for name, value in baseline_results["metrics"].items()
-        }
-    )
-
+    {
+        f"{'val' if evaluation_split == 'validation' else 'test'}_baseline_{name}": value
+        for name, value in baseline_results["metrics"].items()
+    }
+)
     tracker.log_metrics(
-        {
-            f"diagnostics_{name}": value
-            for name, value in diagnostics.items()
-        }
-    )
+    {
+        f"{'val' if evaluation_split == 'validation' else 'test'}_mean_baseline_{name}": value
+        for name, value in mean_baseline_results["metrics"].items()
+    }
+)
+    print("\nMean Baseline")
+
+    for metric, value in mean_baseline_results["metrics"].items():
+        if value is None:
+            print(f"{metric}: N/A")
+        else:
+            print(f"{metric}: {value:.6f}")
+    tracker.log_metrics(
+    {
+        f"{'val' if evaluation_split == 'validation' else 'test'}_diagnostics_{name}": value
+        for name, value in diagnostics.items()
+    }
+)
 
     print("\nPrediction Diagnostics")
 
@@ -305,8 +340,7 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker,run_id
         print(f"{metric}: {value:.6f}")
     os.makedirs(plot_dir, exist_ok=True)
 
-    target_dates = result.test.target_dates
-
+    target_dates = evaluation_data.target_dates
     plot_training_history(
         history=history,
         output_path=os.path.join(plot_dir, "training_history.png"),
@@ -398,11 +432,13 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker,run_id
     return {
         "history": history,
         "model": model,
-        "test_loader": test_loader,
+        "evaluation_loader": evaluation_loader,
+        "evaluation_split":evaluation_split,
         "device": device,
         "checkpoint_path": checkpoint_path,
         "evaluation": model_results,
         "baseline": baseline_results,
+        "mean_baseline": mean_baseline_results
     }
 def run_experiment(config: dict, project_root: str) -> dict:
     tracking_config = config.get("tracking", {})
