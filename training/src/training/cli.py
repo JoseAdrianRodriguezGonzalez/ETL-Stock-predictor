@@ -1,7 +1,7 @@
 import argparse
 import os
 
-from training.config import load_config
+from training.config import PROJECT_ROOT,load_config
 from training.main import run_experiment
 
 
@@ -19,14 +19,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    project_root = os.path.abspath(
-        os.path.join(
-            os.path.dirname(__file__),
-            "..",
-            "..",
-            "..",
-        )
-    )
+    project_root = PROJECT_ROOT
 
     config_path = args.config
 
