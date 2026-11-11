@@ -130,7 +130,8 @@ services:
 
     container_name: sp500-mlflow
     restart: unless-stopped
-
+    environment:
+      MLFLOW_SERVER_ALLOWED_HOSTS: "mlflow:5000,localhost:*,127.0.0.1:*"
     command:
       - server
       - --host

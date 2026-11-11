@@ -5,7 +5,7 @@ from training.tracking.mlflow_tracker import MLflowTracker
 import numpy as np
 import torch
 import torch.nn as nn
-
+import uuid
 from training.datasets.pytorch import (
     MarketTensorDataset,
     create_dataloader,
@@ -24,9 +24,36 @@ from training.evaluation.plots import (
     plot_residuals,
     plot_prediction_scatter,
 )
-def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker) -> dict:
+from mlflow.models import infer_signature
+def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker,run_id:str) -> dict:
     seed = config["experiment"]["seed"]
+    run_dir = os.path.join(
+        project_root,
+        "artifacts",
+        "runs",
+        run_id,
+    )
 
+    checkpoint_path = os.path.join(
+        run_dir,
+        "checkpoints",
+        "best_model.pth",
+    )
+
+    scaler_path = os.path.join(
+        run_dir,
+        "preprocessing",
+        "scaler.joblib",
+    )
+
+    evaluation_dir = os.path.join(
+        run_dir,
+        "evaluation",
+    )
+
+    os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+    os.makedirs(os.path.dirname(scaler_path), exist_ok=True)
+    os.makedirs(evaluation_dir, exist_ok=True)
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -51,14 +78,7 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker) -> di
         dataset_path=dataset_path,
         expected_symbol=data_config["symbol"],
     )
-    result.preprocessor.save(
-        os.path.join(
-            project_root,
-            "artifacts",
-            "preprocessing",
-            "scaler.joblib",
-        )
-    )
+    result.preprocessor.save(scaler_path)
     train_dataset = MarketTensorDataset(
         result.train.X,
         result.train.y,
@@ -149,13 +169,7 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker) -> di
         **stopping_config,
     )
 
-    checkpoint_config = config["checkpoint"]
 
-    checkpoint_path = os.path.join(
-        project_root,
-        checkpoint_config["directory"],
-        checkpoint_config["filename"],
-    )
     tracker.log_tags(
         {
             "model_architecture": model_config["name"],
@@ -178,7 +192,15 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker) -> di
         config=config,
         on_epoch_end=tracker.log_epoch_metrics
     )
+    history_path = os.path.join(
+        run_dir,
+        "training_history.json",
+    )
 
+    with open(history_path, "w", encoding="utf-8") as file:
+        import json
+
+        json.dump(history, file, indent=4)
     print(f"Best checkpoint: {checkpoint_path}")
 
 # Evaluation
@@ -202,7 +224,8 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker) -> di
         predictions_df["y_true"] - predictions_df["y_pred"]
     )
 
-
+    predictions_path=os.path.join(evaluation_dir,"predictions.csv")
+    predictions_df.to_csv(predictions_path, index=False)
 
 
     print("\nTest Results")
@@ -221,16 +244,40 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker) -> di
         else:
             print(f"{metric}: {value:.6f}")
 # Evaluation artifacts
-    plot_dir = os.path.join(
-        project_root,
-        "artifacts",
-        "evaluation",
-        model_config["name"].lower(),
-    )
+    plot_dir = evaluation_dir
     diagnostics = prediction_diagnostics(
         model_results["y_true"],
         model_results["y_pred"],
     )
+    metrics_report = {
+        "model": model_results["metrics"],
+        "baseline": baseline_results["metrics"],
+        "diagnostics": diagnostics,
+    }
+
+    metrics_path = os.path.join(
+        evaluation_dir,
+        "metrics.json",
+    )
+
+    with open(metrics_path, "w", encoding="utf-8") as file:
+        import json
+
+        json.dump(
+            metrics_report,
+            file,
+            indent=4,
+            ensure_ascii=False,
+            default=lambda value: (
+                value.item()
+                if isinstance(value, np.generic)
+                else value.tolist()
+                if isinstance(value, np.ndarray)
+                else str(value)
+            ),
+        )
+
+
     tracker.log_metrics(
         {
             f"test_{name}": value
@@ -284,7 +331,70 @@ def _run_experiment(config: dict, project_root: str,tracker:MLflowTracker) -> di
         output_path=os.path.join(plot_dir, "prediction_scatter.png"),
     )
 
+
+    # Registrar todos los artefactos locales de esta ejecución.
+    tracker.log_artifacts(
+        directory=run_dir,
+        artifact_path="outputs",
+    )
+
+    # --------------------------------------------------
+    # MLflow Model Logging
+    # --------------------------------------------------
+
+    import copy
+
+    tracking_config = config.get("tracking", {})
+
+    registered_model_name = None
+
+    if tracking_config.get("register_model", False):
+        registered_model_name = tracking_config.get(
+            "registered_model_name",
+            "sp500_forecasting",
+        )
+
+    # Crear una copia independiente en CPU.
+    # El modelo original permanece en el dispositivo de entrenamiento.
+    model_for_logging = copy.deepcopy(model)
+    model_for_logging = model_for_logging.to("cpu").eval()
+
+    # Obtener un ejemplo de entrada en CPU.
+    sample_inputs, _ = next(iter(train_loader))
+
+    sample_inputs = (
+        sample_inputs[:1]
+        .detach()
+        .cpu()
+    )
+
+    # Generar salida para construir la firma del modelo.
+    with torch.inference_mode():
+        sample_outputs = model_for_logging(sample_inputs)
+
+    input_example = sample_inputs.numpy()
+    output_example = sample_outputs.detach().cpu().numpy()
+
+    signature = infer_signature(
+        input_example,
+        output_example,
+    )
+
+    # Registrar el modelo en MLflow.
+    model_info = tracker.log_pytorch_model(
+        model=model_for_logging,
+        model_name="forecasting_model",
+        registered_model_name=registered_model_name,
+        signature=signature,
+        input_example=input_example,
+        serialization_format="pickle",
+    )
+
+    if model_info is not None:
+        print(f"MLflow model logged: {model_info.model_uri}")
+
     print(f"Evaluation plots saved to: {plot_dir}")
+
     return {
         "history": history,
         "model": model,
@@ -306,8 +416,14 @@ def run_experiment(config: dict, project_root: str) -> dict:
     )
 
     with tracker.start_run(
-        run_name=config["experiment"]["name"],
+        run_name=config["experiment"]["name"]
     ) as run:
+
+        run_id = (
+            run.info.run_id
+            if run is not None
+            else uuid.uuid4().hex
+        )
 
         tracker.log_config(config)
 
@@ -315,9 +431,9 @@ def run_experiment(config: dict, project_root: str) -> dict:
             config=config,
             project_root=project_root,
             tracker=tracker,
+            run_id=run_id,
         )
 
-        if run is not None:
-            result["mlflow_run_id"] = run.info.run_id
+        result["run_id"] = run_id
 
         return result

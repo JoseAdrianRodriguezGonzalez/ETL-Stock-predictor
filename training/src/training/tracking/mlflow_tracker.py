@@ -171,6 +171,7 @@ class MLflowTracker:
         registered_model_name: str | None = None,
         signature=None,
         input_example=None,
+        serialization_format: str = "pickle",
     ):
         if not self.enabled:
             return None
@@ -183,4 +184,5 @@ class MLflowTracker:
             registered_model_name=registered_model_name,
             signature=signature,
             input_example=input_example,
+            serialization_format=serialization_format,
         )
