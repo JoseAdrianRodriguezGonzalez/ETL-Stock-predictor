@@ -1,35 +1,36 @@
 
 
 from pathlib import Path
+import os
+from pathlib import Path
 
 import yaml
+from dotenv import load_dotenv
 
 
-def load_config(path: str | Path) -> dict:
-    path = Path(path)
+PROJECT_ROOT = Path(
+    os.getenv("PROJECT_ROOT")
+    or os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+        )
+    )
+)
+
+load_dotenv(PROJECT_ROOT / ".env")
+
+
+def load_config(config_path: str):
+    path = Path(config_path)
+
+    if not path.is_absolute():
+        path = PROJECT_ROOT / path
 
     if not path.is_file():
         raise FileNotFoundError(f"Configuration not found: {path}")
 
     with path.open("r", encoding="utf-8") as file:
-        config = yaml.safe_load(file)
-
-    if not isinstance(config, dict):
-        raise ValueError("Configuration must be a YAML mapping")
-
-    required_sections = {
-        "experiment",
-        "data",
-        "model",
-        "training",
-        "checkpoint",
-    }
-
-    missing = required_sections - set(config)
-
-    if missing:
-        raise ValueError(
-            f"Missing configuration sections: {sorted(missing)}"
-        )
-
-    return config
+        return yaml.safe_load(file)

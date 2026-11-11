@@ -9,18 +9,22 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Primero copiamos los archivos de dependencias
+# Dependencias
 COPY training/pyproject.toml training/uv.lock training/README.md ./
 
-# Instalamos las dependencias de forma reproducible
 RUN uv sync --locked --no-dev --no-install-project
 
-# Copiamos el código fuente
+# Código fuente
 COPY training/src ./src
 
-# Instalamos el proyecto
+# Configuraciones externas al paquete
+COPY training/configs ./configs
+
+# Instalación del proyecto
 RUN uv sync --locked --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["training"]
+ENTRYPOINT ["training"]
+CMD ["--config", "configs/lstm.yaml"]
+

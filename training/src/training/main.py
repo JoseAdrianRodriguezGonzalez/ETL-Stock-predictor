@@ -14,8 +14,15 @@ from training.model.factory import get_model
 from training.pipelines.data_pipeline import MarketDataPipeline
 from training.training.trainer import fit
 from training.training.early_stopping import EarlyStopping
-
-
+from training.evaluation.evaluator import evaluate_model
+from training.evaluation.metrics import prediction_diagnostics
+from training.evaluation.baselines import persistence_baseline
+from training.evaluation.plots import (
+    plot_training_history,
+    plot_predictions,
+    plot_residuals,
+    plot_prediction_scatter,
+)
 def run_experiment(config: dict, project_root: str) -> dict:
     seed = config["experiment"]["seed"]
 
@@ -158,11 +165,82 @@ def run_experiment(config: dict, project_root: str) -> dict:
 
     print(f"Best checkpoint: {checkpoint_path}")
 
+# Evaluation
+    model_results = evaluate_model(
+        model=model,
+        dataloader=test_loader,
+        device=device,
+    )
+
+    baseline_results = persistence_baseline(
+        model_results["y_true"],
+    )
+    print("\nTest Results")
+
+    for metric, value in model_results["metrics"].items():
+        if value is None:
+            print(f"{metric}: N/A")
+        else:
+            print(f"{metric}: {value:.6f}")
+
+    print("\nPersistence Baseline")
+
+    for metric, value in baseline_results["metrics"].items():
+        if value is None:
+            print(f"{metric}: N/A")
+        else:
+            print(f"{metric}: {value:.6f}")
+# Evaluation artifacts
+    plot_dir = os.path.join(
+        project_root,
+        "artifacts",
+        "evaluation",
+        model_config["name"].lower(),
+    )
+    diagnostics = prediction_diagnostics(
+        model_results["y_true"],
+        model_results["y_pred"],
+    )
+
+    print("\nPrediction Diagnostics")
+
+    for metric, value in diagnostics.items():
+        print(f"{metric}: {value:.6f}")
+    os.makedirs(plot_dir, exist_ok=True)
+
+    target_dates = result.test.target_dates
+
+    plot_training_history(
+        history=history,
+        output_path=os.path.join(plot_dir, "training_history.png"),
+    )
+
+    plot_predictions(
+        y_true=model_results["y_true"],
+        y_pred=model_results["y_pred"],
+        target_dates=target_dates,
+        output_path=os.path.join(plot_dir, "predictions.png"),
+    )
+
+    plot_residuals(
+        y_true=model_results["y_true"],
+        y_pred=model_results["y_pred"],
+        output_path=os.path.join(plot_dir, "residuals.png"),
+    )
+
+    plot_prediction_scatter(
+        y_true=model_results["y_true"],
+        y_pred=model_results["y_pred"],
+        output_path=os.path.join(plot_dir, "prediction_scatter.png"),
+    )
+
+    print(f"Evaluation plots saved to: {plot_dir}")
     return {
         "history": history,
         "model": model,
         "test_loader": test_loader,
         "device": device,
         "checkpoint_path": checkpoint_path,
+        "evaluation": model_results,
+        "baseline": baseline_results,
     }
-

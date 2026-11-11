@@ -61,7 +61,60 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+  
+  training:
+    build:
+      context: ..
+      dockerfile: training/Dockerfile
 
+    container_name: sp500-training
+    profiles: ["jobs"]
+    restart: "no"
+    working_dir: /app
+
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      PROJECT_ROOT: /app
+    devices:
+      - nvidia.com/gpu=all
+    volumes:
+      # Dataset versionado por DVC: solo lectura
+      - ../data:/app/data:ro
+
+      # Artefactos generados durante entrenamiento
+      - ../artifacts:/app/artifacts
+
+      # Configuraciones disponibles sin reconstruir la imagen
+      - ../training/configs:/app/configs:ro
+
+    networks:
+      - sp500-network
+
+
+  training-dev:
+    build:
+      context: ..
+      dockerfile: training/Dockerfile.dev
+
+    container_name: sp500-training-dev
+    profiles: ["dev"]
+    restart: "no"
+    working_dir: /app
+
+    environment:
+      APP_ENV: development
+      LOG_LEVEL: DEBUG
+      PROJECT_ROOT: /app
+  
+    volumes:
+      - ../training/src:/app/src
+      - ../training/configs:/app/configs:ro
+      - ../data:/app/data:ro
+      - ../artifacts:/app/artifacts
+
+    networks:
+      - sp500-network
 networks:
   sp500-network:
     name: sp500-network
