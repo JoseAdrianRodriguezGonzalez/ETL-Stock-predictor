@@ -240,6 +240,27 @@ services:
         condition: service_healthy
       triton:
         condition: service_healthy
+
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: ""
+
+    container_name: sp500-frontend
+    restart: unless-stopped
+
+    ports:
+      - "127.0.0.1:5173:80"
+
+    depends_on:
+      backend:
+        condition: service_started
+
+    networks:
+      - sp500-network
 networks:
   sp500-network:
     name: sp500-network
