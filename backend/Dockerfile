@@ -1,3 +1,5 @@
+
+
 FROM python:3.12-slim
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -9,18 +11,20 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Primero copiamos los archivos de dependencias
+# Dependencias
 COPY backend/pyproject.toml backend/uv.lock backend/README.md ./
 
-# Instalamos las dependencias de forma reproducible
 RUN uv sync --locked --no-dev --no-install-project
 
-# Copiamos el código fuente
+# Código fuente
 COPY backend/src ./src
 
-# Instalamos el proyecto
+# Instalar el proyecto
 RUN uv sync --locked --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-CMD ["python", "-m", "backend"]
+EXPOSE 8080
+
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080"]
+
