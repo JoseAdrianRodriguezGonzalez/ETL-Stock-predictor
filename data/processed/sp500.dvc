@@ -1,6 +1,6 @@
 outs:
-- md5: ff7851790f05df90175f25000c36e717.dir
-  size: 84656
+- md5: be2b2ce08b7591a2057e44bf2b19dc32.dir
+  size: 84724
   nfiles: 2
   hash: md5
   path: sp500

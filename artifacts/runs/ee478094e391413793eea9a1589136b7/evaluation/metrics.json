@@ -1,0 +1,32 @@
+{
+    "evaluation_split": "validation",
+    "model": {
+        "mse": 0.0008079844997167592,
+        "rmse": 0.028425068156765414,
+        "mae": 0.019424462674314146,
+        "directional_accuracy": 0.49224806201550386
+    },
+    "baselines": {
+        "persistence": {
+            "mse": 0.00013903833418159352,
+            "rmse": 0.011791451741901568,
+            "mae": 0.00725819336728875,
+            "directional_accuracy": null
+        },
+        "mean": {
+            "mse": 0.00013861747864940346,
+            "rmse": 0.011773592427522003,
+            "mae": 0.0072091290345541225,
+            "directional_accuracy": 0.5697674418604651
+        }
+    },
+    "diagnostics": {
+        "mean_actual": 0.0006552434743795413,
+        "mean_predicted": -0.0025178299162739006,
+        "std_actual": 0.01177323193396259,
+        "std_predicted": 0.025753484115885846,
+        "std_ratio": 2.18746086549047,
+        "pearson_correlation": 0.006488797331703201,
+        "regression_slope": 0.01419399022719964
+    }
+}
